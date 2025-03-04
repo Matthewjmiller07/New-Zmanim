@@ -30,10 +30,13 @@ const ZmanimChart: React.FC<ZmanimChartProps> = ({ data, locations, selectedZman
           Object.entries(cityData.times[zman]).forEach(([date, time]) => {
             if (time) {
               const parsedDate = new Date(date + 'T00:00:00');
+              // Parse the ISO timestamp which includes timezone info
               const zmanTime = new Date(time);
-
+              
               if (!isNaN(zmanTime.getTime())) {
-                const timeInHours = zmanTime.getHours() + zmanTime.getMinutes() / 60;
+                // Convert to local time for display
+                const localTime = new Date(zmanTime.toLocaleString('en-US', { timeZone: cityData.location.tzid }));
+                const timeInHours = localTime.getHours() + localTime.getMinutes() / 60;
                 timeData.push([parsedDate.getTime(), timeInHours]);
 
                 minTime = Math.min(minTime, timeInHours);

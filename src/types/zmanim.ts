@@ -11,9 +11,13 @@ export interface ZmanimData {
     end: string;
   };
   location: {
-    name: string;
+    title: string;
+    city: string;
+    tzid: string;
     latitude: number;
     longitude: number;
+    cc: string;
+    country: string;
   };
 }
 

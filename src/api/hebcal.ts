@@ -11,7 +11,8 @@ export async function fetchZmanim(
     end: endDate,
     b: '18',
     M: 'on',
-    m: '50'
+    m: '50',
+    timezone: 'auto'
   });
 
   if (typeof location === 'string') {
