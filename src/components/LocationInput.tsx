@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TextField,
   IconButton,
   Box,
   Paper,
   Typography,
-  Stack
+  Stack,
 } from '@mui/material';
 import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 
@@ -20,8 +20,27 @@ const LocationInput: React.FC<LocationInputProps> = ({
   locations,
   onLocationChange,
   onLocationAdd,
-  onLocationRemove
+  onLocationRemove,
 }) => {
+  const [helperTexts, setHelperTexts] = useState<string[]>(locations.map(() => ''));
+
+  useEffect(() => {
+    // Update helper text dynamically based on the input value
+    setHelperTexts(
+      locations.map(location => {
+        if (!location) return 'Enter a city name or click on the map';
+        if (location.includes(',') && location.split(',').length === 2) {
+          const coords = location.split(',').map(n => parseFloat(n.trim()));
+          if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+            return 'Coordinates detected - fetching location name...';
+          }
+          return 'Invalid coordinates format';
+        }
+        return 'Enter a city name or click on the map';
+      })
+    );
+  }, [locations]);
+
   return (
     <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
       <Typography variant="h6" gutterBottom>
@@ -37,11 +56,8 @@ const LocationInput: React.FC<LocationInputProps> = ({
               onChange={(e) => onLocationChange(index, e.target.value)}
               placeholder="Enter city name or coordinates"
               size="small"
-              helperText={
-                location.includes(',') && location.split(',').length === 2
-                  ? 'Coordinates detected - fetching location name...'
-                  : 'Enter a city name or click on the map'
-              }
+              helperText={helperTexts[index]}
+              InputLabelProps={{ shrink: true }}
             />
             {locations.length > 1 && (
               <IconButton
