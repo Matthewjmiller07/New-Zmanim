@@ -93,42 +93,66 @@ function App() {
     }
   };
 
-  const handleCurrentLocationClick = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          handleMapLocationSelect(location);
-          
-          setIsLoading(true);
-          try {
-            const today = new Date();
-            const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            setStartDate(todayStart);
-            setEndDate(todayStart);
-            const formattedDate = format(todayStart, 'yyyy-MM-dd');
-            const results = await Promise.all([
-              fetchZmanim(
-                `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
-                formattedDate,
-                formattedDate
-              )
-            ]);
-            setZmanimData(results);
-          } catch (error) {
-            console.error('Error fetching zmanim:', error);
-          } finally {
-            setIsLoading(false);
-          }
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          // You might want to add error handling UI here
-        }
-      );
+  const handleCurrentLocationClick = async () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+
+    try {
+      // First check if we have permission
+      const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+      
+      if (permissionStatus.state === 'denied') {
+        alert('Location access is blocked. Please enable location access in your browser settings.');
+        return;
+      }
+
+      setIsLoading(true);
+      
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        });
+      });
+
+      const location = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+      
+      handleMapLocationSelect(location);
+      
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      setStartDate(todayStart);
+      setEndDate(todayStart);
+      const formattedDate = format(todayStart, 'yyyy-MM-dd');
+      
+      const results = await Promise.all([
+        fetchZmanim(
+          `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
+          formattedDate,
+          formattedDate
+        )
+      ]);
+      
+      setZmanimData(results);
+    } catch (error) {
+      console.error('Error getting location:', error);
+      if ((error as GeolocationPositionError).code === 1) {
+        alert('Location access was denied. Please enable location access in your browser settings.');
+      } else if ((error as GeolocationPositionError).code === 2) {
+        alert('Location is not available. Please try again.');
+      } else if ((error as GeolocationPositionError).code === 3) {
+        alert('Location request timed out. Please try again.');
+      } else {
+        alert('Error getting location. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -224,6 +248,7 @@ function App() {
                   selectedZmanim={selectedZmanim}
                 />
                 <ZmanimAnalysis
+                  startDate={startDate}
                   data={zmanimData}
                   locations={locations}
                   selectedZmanim={selectedZmanim}
