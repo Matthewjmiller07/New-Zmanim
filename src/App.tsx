@@ -69,6 +69,16 @@ function App() {
       // Trim whitespace from input
       const trimmedValue = value.trim();
 
+      // Check for empty input
+      if (!trimmedValue) {
+        setLocations(prev => {
+          const newLocations = [...prev];
+          newLocations[index] = ''; // Clear the input
+          return newLocations;
+        });
+        return;
+      }
+
       // Check if the input is in lat,lng format
       if (trimmedValue.includes(',')) {
         const coords = trimmedValue.split(',').map(n => parseFloat(n.trim()));
@@ -90,7 +100,7 @@ function App() {
           console.error('Invalid coordinates format.');
           setLocations(prev => {
             const newLocations = [...prev];
-            newLocations[index] = 'Invalid coordinates'; // Show error message
+            newLocations[index] = ''; // Clear the input
             return newLocations;
           });
         }
@@ -113,7 +123,7 @@ function App() {
       console.error('Error fetching location:', error.message || error); // Log the specific error message
       setLocations(prev => {
         const newLocations = [...prev];
-        newLocations[index] = 'Error fetching location'; // Show error message
+        newLocations[index] = ''; // Clear the input on error
         return newLocations;
       });
     }
@@ -205,7 +215,7 @@ function App() {
         )
       ]);
       setZmanimData(results);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting location:', error);
       
       if (error instanceof Error && error.message === 'PERMISSION_DENIED') {
@@ -259,7 +269,7 @@ function App() {
       );
 
       setZmanimData(results);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching zmanim:', error);
       // You might want to add error handling UI here
     } finally {
