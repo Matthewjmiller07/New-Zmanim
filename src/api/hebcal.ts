@@ -1,6 +1,6 @@
 import { ZmanimData } from '../types/zmanim';
 
-const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+const CORS_PROXY = 'https://corsproxy.io/?';
 
 export async function geocodeLocation(query: string): Promise<{ lat: number; lng: number; display_name: string }> {
   // Skip short queries to avoid meaningless geocoding attempts
