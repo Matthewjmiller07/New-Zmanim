@@ -109,8 +109,8 @@ function App() {
           return newMarkers;
         });
       }
-    } catch (error) {
-      console.error('Error fetching location:', error);
+    } catch (error: any) {
+      console.error('Error fetching location:', error.message || error); // Log the specific error message
       setLocations(prev => {
         const newLocations = [...prev];
         newLocations[index] = 'Error fetching location'; // Show error message
