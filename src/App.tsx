@@ -67,6 +67,20 @@ function App() {
       if (!value || value.length < 3) return; // Don't geocode short queries
       
       try {
+        // If it looks like coordinates, try to parse them directly
+        if (value.includes(',')) {
+          const [lat, lng] = value.split(',').map(n => parseFloat(n.trim()));
+          if (!isNaN(lat) && !isNaN(lng)) {
+            setMapMarkers(prev => {
+              const newMarkers = [...prev];
+              newMarkers[index] = { lat, lng };
+              return newMarkers;
+            });
+            return;
+          }
+        }
+
+        // Otherwise try geocoding
         const result = await geocodeLocation(value);
         setLocations(prev => {
           const newLocations = [...prev];
@@ -81,7 +95,7 @@ function App() {
       } catch (error) {
         console.error('Error processing location:', value, error);
       }
-    }, 1000), // Wait 1 second after typing stops
+    }, 500), // Reduced wait time to 500ms for better responsiveness
     []
   );
 

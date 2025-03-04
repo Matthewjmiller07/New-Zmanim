@@ -1,8 +1,19 @@
 import { ZmanimData } from '../types/zmanim';
 
-const CORS_PROXY = 'https://corsproxy.io/?';
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
 export async function geocodeLocation(query: string): Promise<{ lat: number; lng: number; display_name: string }> {
+  // If query looks like coordinates, parse them directly
+  if (query.includes(',')) {
+    const [lat, lng] = query.split(',').map(n => parseFloat(n.trim()));
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return {
+        lat,
+        lng,
+        display_name: `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+      };
+    }
+  }
   try {
     const encodedQuery = encodeURIComponent(query);
     const response = await fetch(
