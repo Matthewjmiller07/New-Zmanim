@@ -21,6 +21,7 @@ import ZmanimMap from './components/ZmanimMap';
 import LocationInput from './components/LocationInput';
 import ZmanimSelector from './components/ZmanimSelector';
 import ZmanimChart from './components/ZmanimChart';
+import ZmanimAnalysis from './components/ZmanimAnalysis';
 import { fetchZmanim } from './api/hebcal';
 import { ZmanimData } from './types/zmanim';
 
@@ -147,11 +148,18 @@ function App() {
             </Box>
 
             {zmanimData.length > 0 && (
-              <ZmanimChart
-                data={zmanimData}
-                locations={locations}
-                selectedZmanim={selectedZmanim}
-              />
+              <>
+                <ZmanimChart
+                  data={zmanimData}
+                  locations={locations}
+                  selectedZmanim={selectedZmanim}
+                />
+                <ZmanimAnalysis
+                  data={zmanimData}
+                  locations={locations}
+                  selectedZmanim={selectedZmanim}
+                />
+              </>
             )}
           </Container>
         </LocalizationProvider>
