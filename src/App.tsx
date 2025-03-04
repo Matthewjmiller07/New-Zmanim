@@ -16,7 +16,6 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { createTheme } from '@mui/material/styles';
 import { format } from 'date-fns';
-import debounce from 'lodash/debounce';
 
 import ZmanimMap from './components/ZmanimMap';
 import LocationInput from './components/LocationInput';
@@ -62,57 +61,23 @@ function App() {
     setLocations(locations.filter((_, i) => i !== index));
   };
 
-  const debouncedGeocoding = React.useCallback(
-    debounce(async (value: string, index: number) => {
-      if (!value || value.length < 3) return; // Don't geocode short queries
-      
-      try {
-        // If it looks like coordinates, try to parse them directly
-        if (value.includes(',')) {
-          const [lat, lng] = value.split(',').map(n => parseFloat(n.trim()));
-          if (!isNaN(lat) && !isNaN(lng)) {
-            setMapMarkers(prev => {
-              const newMarkers = [...prev];
-              newMarkers[index] = { lat, lng };
-              return newMarkers;
-            });
-            setLocations(prev => {
-              const newLocations = [...prev];
-              newLocations[index] = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-              return newLocations;
-            });
-            return;
-          }
-        }
-
-        // Otherwise try geocoding
-        const result = await geocodeLocation(value);
-        const displayName = result.display_name.split(',')[0]; // Just show the city name
-        setLocations(prev => {
-          const newLocations = [...prev];
-          newLocations[index] = displayName;
-          return newLocations;
-        });
-        setMapMarkers(prev => {
-          const newMarkers = [...prev];
-          newMarkers[index] = { lat: result.lat, lng: result.lng };
-          return newMarkers;
-        });
-      } catch (error) {
-        console.error('Error processing location:', value, error);
-      }
-    }, 500), // Reduced wait time to 500ms for better responsiveness
-    []
-  );
-
-  const handleLocationChange = (index: number, value: string) => {
-    const newLocations = [...locations];
-    newLocations[index] = value;
-    setLocations(newLocations);
-
-    // Only attempt geocoding for non-coordinate inputs
-    if (!value.includes(',')) {
-      debouncedGeocoding(value, index);
+  const handleLocationChange = async (index: number, value: string) => {
+    console.log(`Fetching location for: ${value}`); // Log the location being fetched
+    try {
+      const result = await geocodeLocation(value);
+      console.log(`Geocoded location: ${JSON.stringify(result)}`); // Log the result of geocoding
+      setLocations(prev => {
+        const newLocations = [...prev];
+        newLocations[index] = `${result.display_name} (Lat: ${result.lat}, Lng: ${result.lng})`; // Show city name and coordinates
+        return newLocations;
+      });
+      setMapMarkers(prev => {
+        const newMarkers = [...prev];
+        newMarkers[index] = { lat: result.lat, lng: result.lng };
+        return newMarkers;
+      });
+    } catch (error) {
+      console.error('Error fetching location:', error);
     }
   };
 
@@ -158,7 +123,9 @@ function App() {
               instructions += '1. Click Safari in the menu bar\n' +
                            '2. Click "Settings" (or Preferences)\n' +
                            '3. Go to "Websites" tab\n' +
-                           '4. Find "Location Services" and allow for this website';
+                           '4. Find "Location" on the left\n' +
+                           '5. Find this website and set it to "Allow"\n' +
+                           '6. Refresh the page';
             } else {
               instructions += 'Please enable location services in your browser settings and refresh the page.';
             }
