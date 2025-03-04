@@ -70,27 +70,9 @@ function App() {
     setLocations([`${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`]);
   };
 
-  const handleTodayClick = async () => {
-    const today = new Date();
-    // Strip time component to avoid timezone issues
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    setStartDate(todayStart);
-    setEndDate(todayStart);
-    setIsLoading(true);
-
-    try {
-      const formattedDate = format(todayStart, 'yyyy-MM-dd');
-      const results = await Promise.all(
-        locations.map(location =>
-          fetchZmanim(location, formattedDate, formattedDate)
-        )
-      );
-      setZmanimData(results);
-    } catch (error) {
-      console.error('Error fetching zmanim:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleTodayClick = () => {
+    // Just trigger the current location handler
+    handleCurrentLocationClick();
   };
 
   const handleCurrentLocationClick = async () => {
@@ -123,14 +105,17 @@ function App() {
         lng: position.coords.longitude
       };
       
-      handleMapLocationSelect(location);
-      
+      // Get today's date
       const today = new Date();
-      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      setStartDate(todayStart);
-      setEndDate(todayStart);
-      const formattedDate = format(todayStart, 'yyyy-MM-dd');
+      today.setHours(0, 0, 0, 0);
       
+      // Update state
+      setLocations([`${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`]);
+      setStartDate(today);
+      setEndDate(today);
+      
+      // Fetch zmanim
+      const formattedDate = format(today, 'yyyy-MM-dd');
       const results = await Promise.all([
         fetchZmanim(
           `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
@@ -195,7 +180,10 @@ function App() {
                 onCurrentLocationClick={handleCurrentLocationClick}
                 isLoading={isLoading}
               />
-              <ZmanimMap onLocationSelect={handleMapLocationSelect} />
+              <ZmanimMap 
+                onLocationSelect={handleMapLocationSelect}
+                locations={locations}
+              />
               
               <LocationInput
                 locations={locations}
