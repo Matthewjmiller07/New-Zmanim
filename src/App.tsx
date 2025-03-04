@@ -55,10 +55,12 @@ function App() {
 
   const handleLocationAdd = () => {
     setLocations([...locations, '']);
+    setMapMarkers([...mapMarkers, { lat: 31.7767, lng: 35.2345 }]);
   };
 
   const handleLocationRemove = (index: number) => {
     setLocations(locations.filter((_, i) => i !== index));
+    setMapMarkers(mapMarkers.filter((_, i) => i !== index));
   };
 
   const handleLocationChange = async (index: number, value: string) => {
