@@ -24,18 +24,23 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
   try {
     const encodedQuery = encodeURIComponent(query.trim());
     const url = `${CORS_PROXY}https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1&addressdetails=1&countrycodes=us,ca`;
-    console.log('Fetching geocoding URL:', url); // Log the full URL
+    console.log('Fetching geocoding URL:', url);
 
     const response = await fetch(url);
-    console.log('Geocoding response status:', response.status, response.statusText); // Log HTTP status
+    console.log('Geocoding response status:', response.status, response.statusText);
 
     if (!response.ok) {
-      const errorText = await response.text(); // Get raw response for debugging
+      const errorText = await response.text();
       throw new Error(`Geocoding failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('Geocoding response data:', data); // Log the full response
+    console.log('Geocoding response data:', data);
+
+    // Check if the proxy returned an error object
+    if (data && data.error) {
+      throw new Error(`Proxy error: ${data.error.message || JSON.stringify(data.error)}`);
+    }
 
     if (!data || !Array.isArray(data) || data.length === 0) {
       throw new Error(`Location not found: ${query}`);
@@ -53,20 +58,12 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
       lng: parseFloat(result.lon),
       display_name: cityName
     };
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error('Geocoding error:', {
-        query,
-        message: error.message,
-        stack: error.stack
-      });
-    } else {
-      console.error('Geocoding error:', {
-        query,
-        message: 'Unknown error',
-        stack: 'Unknown error'
-      });
-    }
+  } catch (error: unknown) {
+    console.error('Geocoding error:', {
+      query,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'Unknown error'
+    });
     throw error;
   }
 }
@@ -83,8 +80,11 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string> 
 
     const data = await response.json();
     return data.display_name;
-  } catch (error) {
-    console.error('Reverse geocoding error:', error);
+  } catch (error: unknown) {
+    console.error('Reverse geocoding error:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'Unknown error'
+    });
     throw error;
   }
 }
@@ -104,8 +104,11 @@ export async function fetchZmanim(
         const geocoded = await geocodeLocation(location);
         lat = geocoded.lat;
         lng = geocoded.lng;
-      } catch (error) {
-        console.error('Geocoding error:', error);
+      } catch (error: unknown) {
+        console.error('Geocoding error:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : 'Unknown error'
+        });
         throw new Error(`Could not geocode location: ${location}`);
       }
     } else {
