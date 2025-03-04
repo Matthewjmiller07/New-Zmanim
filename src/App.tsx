@@ -76,15 +76,21 @@ function App() {
               newMarkers[index] = { lat, lng };
               return newMarkers;
             });
+            setLocations(prev => {
+              const newLocations = [...prev];
+              newLocations[index] = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+              return newLocations;
+            });
             return;
           }
         }
 
         // Otherwise try geocoding
         const result = await geocodeLocation(value);
+        const displayName = result.display_name.split(',')[0]; // Just show the city name
         setLocations(prev => {
           const newLocations = [...prev];
-          newLocations[index] = result.display_name;
+          newLocations[index] = displayName;
           return newLocations;
         });
         setMapMarkers(prev => {

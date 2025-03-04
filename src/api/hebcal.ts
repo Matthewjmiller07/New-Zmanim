@@ -3,6 +3,10 @@ import { ZmanimData } from '../types/zmanim';
 const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
 export async function geocodeLocation(query: string): Promise<{ lat: number; lng: number; display_name: string }> {
+  // Add country if not specified to improve geocoding accuracy
+  if (!query.toLowerCase().includes('canada') && !query.toLowerCase().includes('usa') && !query.toLowerCase().includes('united states')) {
+    query = `${query}, USA`;
+  }
   // Try direct coordinate parsing first
   if (query.includes(',')) {
     const [lat, lng] = query.split(',').map(n => parseFloat(n.trim()));
@@ -19,7 +23,7 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
   try {
     const encodedQuery = encodeURIComponent(query);
     const response = await fetch(
-      `${CORS_PROXY}https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1&addressdetails=1`
+      `${CORS_PROXY}https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1&addressdetails=1&countrycodes=us,ca`
     );
     
     if (!response.ok) {
@@ -36,10 +40,13 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
       throw new Error(`Invalid geocoding response for: ${query}`);
     }
 
+    // Extract city name from address details or use the original query
+    const cityName = result.address?.city || result.address?.town || result.address?.village || query.split(',')[0];
+
     return {
       lat: parseFloat(result.lat),
       lng: parseFloat(result.lon),
-      display_name: result.display_name || query
+      display_name: cityName
     };
   } catch (error) {
     console.error('Geocoding error:', error);
