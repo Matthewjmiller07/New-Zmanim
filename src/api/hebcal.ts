@@ -64,7 +64,17 @@ export async function fetchZmanim(
   });
 
   if (typeof location === 'string') {
-    if (location.includes(',')) {
+    // First try to geocode if it's not already coordinates
+    if (!location.includes(',')) {
+      try {
+        const geocoded = await geocodeLocation(location);
+        params.append('latitude', geocoded.lat.toString());
+        params.append('longitude', geocoded.lng.toString());
+      } catch (error) {
+        console.error('Geocoding error:', error);
+        throw new Error(`Could not geocode location: ${location}`);
+      }
+    } else {
       // Handle lat,lng string format
       const [lat, lng] = location.split(',').map(n => parseFloat(n.trim()));
       if (!isNaN(lat) && !isNaN(lng)) {
@@ -73,10 +83,6 @@ export async function fetchZmanim(
       } else {
         throw new Error('Invalid coordinates format');
       }
-    } else {
-      // Convert city name to a format the API accepts
-      const formattedCity = location.trim();
-      params.append('city', formattedCity);
     }
   } else {
     if (isNaN(location.lat) || isNaN(location.lng)) {
