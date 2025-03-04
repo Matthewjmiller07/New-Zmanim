@@ -66,12 +66,15 @@ function App() {
   const handleLocationChange = async (index: number, value: string) => {
     console.log(`Fetching location for: ${value}`); // Log the location being fetched
     try {
+      // Trim whitespace from input
+      const trimmedValue = value.trim();
+
       // Check if the input is in lat,lng format
-      if (value.includes(',')) {
-        const coords = value.split(',').map(n => parseFloat(n.trim()));
+      if (trimmedValue.includes(',')) {
+        const coords = trimmedValue.split(',').map(n => parseFloat(n.trim()));
         if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
           // If valid coordinates, fetch city name
-          const result = await geocodeLocation(value);
+          const result = await geocodeLocation(trimmedValue);
           console.log(`Geocoded location: ${JSON.stringify(result)}`); // Log the result of geocoding
           setLocations(prev => {
             const newLocations = [...prev];
@@ -85,10 +88,15 @@ function App() {
           });
         } else {
           console.error('Invalid coordinates format.');
+          setLocations(prev => {
+            const newLocations = [...prev];
+            newLocations[index] = 'Invalid coordinates'; // Show error message
+            return newLocations;
+          });
         }
       } else {
         // Otherwise, treat it as a city name
-        const result = await geocodeLocation(value);
+        const result = await geocodeLocation(trimmedValue);
         console.log(`Geocoded location: ${JSON.stringify(result)}`); // Log the result of geocoding
         setLocations(prev => {
           const newLocations = [...prev];
@@ -103,6 +111,11 @@ function App() {
       }
     } catch (error) {
       console.error('Error fetching location:', error);
+      setLocations(prev => {
+        const newLocations = [...prev];
+        newLocations[index] = 'Error fetching location'; // Show error message
+        return newLocations;
+      });
     }
   };
 
