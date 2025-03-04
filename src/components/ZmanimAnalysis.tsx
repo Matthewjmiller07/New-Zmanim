@@ -13,6 +13,7 @@ interface ZmanComparison {
   location: string;
   time: Date;
   timeString: string;
+  date: string;
 }
 
 const ZmanimAnalysis: React.FC<ZmanimAnalysisProps> = ({ data, locations, selectedZmanim }) => {
@@ -26,12 +27,13 @@ const ZmanimAnalysis: React.FC<ZmanimAnalysisProps> = ({ data, locations, select
   };
 
   const analyzeZmanim = (zman: string) => {
-
-    const dateComparisons = new Map<string, ZmanComparison[]>();
+    const locationAnalysis = new Map<string, { earliest: ZmanComparison; latest: ZmanComparison }>();
+    const allComparisons: ZmanComparison[] = [];
 
     // Collect all times for this zman across locations
     data.forEach((cityData, index) => {
       if (cityData.times[zman]) {
+        const locationComparisons: ZmanComparison[] = [];
         Object.entries(cityData.times[zman]).forEach(([date, time]) => {
           if (time) {
             const zmanTime = new Date(time);
@@ -39,65 +41,103 @@ const ZmanimAnalysis: React.FC<ZmanimAnalysisProps> = ({ data, locations, select
             const comparison: ZmanComparison = {
               location: locations[index],
               time: zmanTime,
-              timeString
+              timeString,
+              date
             };
-
-            if (!dateComparisons.has(date)) {
-              dateComparisons.set(date, []);
-            }
-            dateComparisons.get(date)?.push(comparison);
+            locationComparisons.push(comparison);
+            allComparisons.push(comparison);
           }
         });
+
+        // Find earliest and latest for this location
+        if (locationComparisons.length > 0) {
+          locationComparisons.sort((a, b) => a.time.getTime() - b.time.getTime());
+          locationAnalysis.set(locations[index], {
+            earliest: locationComparisons[0],
+            latest: locationComparisons[locationComparisons.length - 1]
+          });
+        }
       }
     });
 
-    // Analyze the comparisons for each date
-    const analysis: JSX.Element[] = [];
-    dateComparisons.forEach((comparisons, date) => {
-      if (comparisons.length > 0) {
-        // Sort by time
-        comparisons.sort((a, b) => a.time.getTime() - b.time.getTime());
-        const earliest = comparisons[0];
-        const latest = comparisons[comparisons.length - 1];
+    // Find overall earliest and latest
+    allComparisons.sort((a, b) => a.time.getTime() - b.time.getTime());
+    const overallEarliest = allComparisons[0];
+    const overallLatest = allComparisons[allComparisons.length - 1];
 
-        analysis.push(
-          <Box key={`${zman}-${date}`} sx={{ mb: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-              {format(new Date(date), 'MMMM d, yyyy')}:
+    return (
+      <Box sx={{ mb: 3 }}>
+        {/* Overall analysis */}
+        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
+          Overall Analysis:
+        </Typography>
+        <Typography variant="body2">
+          • Earliest {getZmanLabel(zman).toLowerCase()}: {overallEarliest.location} on {format(new Date(overallEarliest.date), 'MMMM d')} at {overallEarliest.timeString}
+        </Typography>
+        <Typography variant="body2">
+          • Latest {getZmanLabel(zman).toLowerCase()}: {overallLatest.location} on {format(new Date(overallLatest.date), 'MMMM d')} at {overallLatest.timeString}
+        </Typography>
+
+        {/* Per location analysis */}
+        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, mb: 1 }}>
+          By Location:
+        </Typography>
+        {Array.from(locationAnalysis.entries()).map(([location, analysis]) => (
+          <Box key={location} sx={{ mb: 1 }}>
+            <Typography variant="body2">
+              • {location}:
             </Typography>
-            {comparisons.map((comp) => (
-              <Typography key={comp.location} variant="body2">
-                • {comp.location}: {comp.timeString}
-              </Typography>
-            ))}
-            {comparisons.length > 1 && (
-              <>
-                <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                  Earliest: {earliest.location} at {earliest.timeString}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Latest: {latest.location} at {latest.timeString}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Time difference: {formatTimeDifference(latest.time.getTime() - earliest.time.getTime())}
-                </Typography>
-              </>
-            )}
+            <Typography variant="body2" sx={{ pl: 2 }}>
+              Earliest: {format(new Date(analysis.earliest.date), 'MMMM d')} at {analysis.earliest.timeString}
+            </Typography>
+            <Typography variant="body2" sx={{ pl: 2 }}>
+              Latest: {format(new Date(analysis.latest.date), 'MMMM d')} at {analysis.latest.timeString}
+            </Typography>
           </Box>
-        );
-      }
-    });
+        ))}
 
-    return analysis;
-  };
-
-  const formatTimeDifference = (diffMs: number): string => {
-    const diffMinutes = Math.round(diffMs / (1000 * 60));
-    const hours = Math.floor(diffMinutes / 60);
-    const minutes = diffMinutes % 60;
-    return hours > 0 
-      ? `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`
-      : `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+        {/* Location comparisons */}
+        {locations.length > 1 && (
+          <>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, mb: 1 }}>
+              Location Comparisons:
+            </Typography>
+            {locations.map((loc1, i) => 
+              locations.slice(i + 1).map(loc2 => {
+                const analysis1 = locationAnalysis.get(loc1);
+                const analysis2 = locationAnalysis.get(loc2);
+                if (analysis1 && analysis2) {
+                  const isAlwaysEarlier = allComparisons
+                    .filter(c => c.location === loc1)
+                    .every(c1 => 
+                      allComparisons
+                        .filter(c2 => c2.location === loc2 && c2.date === c1.date)
+                        .every(c2 => c1.time < c2.time)
+                    );
+                  const isAlwaysLater = allComparisons
+                    .filter(c => c.location === loc1)
+                    .every(c1 => 
+                      allComparisons
+                        .filter(c2 => c2.location === loc2 && c2.date === c1.date)
+                        .every(c2 => c1.time > c2.time)
+                    );
+                  
+                  if (isAlwaysEarlier || isAlwaysLater) {
+                    return (
+                      <Typography key={`${loc1}-${loc2}`} variant="body2">
+                        • {loc1} is always {isAlwaysEarlier ? 'earlier' : 'later'} than {loc2}
+                      </Typography>
+                    );
+                  }
+                  return null;
+                }
+                return null;
+              })
+            )}
+          </>
+        )}
+      </Box>
+    );
   };
 
   const getZmanLabel = (zmanId: string): string => {
