@@ -64,18 +64,41 @@ function App() {
   const handleLocationChange = async (index: number, value: string) => {
     console.log(`Fetching location for: ${value}`); // Log the location being fetched
     try {
-      const result = await geocodeLocation(value);
-      console.log(`Geocoded location: ${JSON.stringify(result)}`); // Log the result of geocoding
-      setLocations(prev => {
-        const newLocations = [...prev];
-        newLocations[index] = `${result.display_name} (Lat: ${result.lat}, Lng: ${result.lng})`; // Show city name and coordinates
-        return newLocations;
-      });
-      setMapMarkers(prev => {
-        const newMarkers = [...prev];
-        newMarkers[index] = { lat: result.lat, lng: result.lng };
-        return newMarkers;
-      });
+      // Check if the input is in lat,lng format
+      if (value.includes(',')) {
+        const coords = value.split(',').map(n => parseFloat(n.trim()));
+        if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+          // If valid coordinates, fetch city name
+          const result = await geocodeLocation(value);
+          console.log(`Geocoded location: ${JSON.stringify(result)}`); // Log the result of geocoding
+          setLocations(prev => {
+            const newLocations = [...prev];
+            newLocations[index] = `${result.display_name} (Lat: ${result.lat}, Lng: ${result.lng})`; // Show city name and coordinates
+            return newLocations;
+          });
+          setMapMarkers(prev => {
+            const newMarkers = [...prev];
+            newMarkers[index] = { lat: result.lat, lng: result.lng };
+            return newMarkers;
+          });
+        } else {
+          console.error('Invalid coordinates format.');
+        }
+      } else {
+        // Otherwise, treat it as a city name
+        const result = await geocodeLocation(value);
+        console.log(`Geocoded location: ${JSON.stringify(result)}`); // Log the result of geocoding
+        setLocations(prev => {
+          const newLocations = [...prev];
+          newLocations[index] = `${result.display_name} (Lat: ${result.lat}, Lng: ${result.lng})`; // Show city name and coordinates
+          return newLocations;
+        });
+        setMapMarkers(prev => {
+          const newMarkers = [...prev];
+          newMarkers[index] = { lat: result.lat, lng: result.lng };
+          return newMarkers;
+        });
+      }
     } catch (error) {
       console.error('Error fetching location:', error);
     }
