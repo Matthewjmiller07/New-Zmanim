@@ -22,6 +22,7 @@ import LocationInput from './components/LocationInput';
 import ZmanimSelector from './components/ZmanimSelector';
 import ZmanimChart from './components/ZmanimChart';
 import ZmanimAnalysis from './components/ZmanimAnalysis';
+import ZmanimTable from './components/ZmanimTable';
 import { fetchZmanim } from './api/hebcal';
 import { ZmanimData } from './types/zmanim';
 
@@ -155,6 +156,11 @@ function App() {
                   selectedZmanim={selectedZmanim}
                 />
                 <ZmanimAnalysis
+                  data={zmanimData}
+                  locations={locations}
+                  selectedZmanim={selectedZmanim}
+                />
+                <ZmanimTable
                   data={zmanimData}
                   locations={locations}
                   selectedZmanim={selectedZmanim}
