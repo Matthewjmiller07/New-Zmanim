@@ -42,7 +42,7 @@ function App() {
     [prefersDarkMode]
   );
 
-  const [locations, setLocations] = useState<string[]>(['Jerusalem, Israel']);
+  const [locations, setLocations] = useState<string[]>(['31.7767, 35.2345']); // Jerusalem coordinates
   const [mapMarkers, setMapMarkers] = useState<Array<{ lat: number; lng: number }>>([{ lat: 31.7767, lng: 35.2345 }]); // Jerusalem
   const [selectedZmanim, setSelectedZmanim] = useState<string[]>([
     'sunrise',
@@ -136,29 +136,32 @@ function App() {
     try {
       setIsLoading(true);
 
-      // Try to get the current permission state
-      let permissionStatus;
-      try {
-        permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-        if (permissionStatus.state === 'denied') {
-          throw new Error('PERMISSION_DENIED');
-        }
-      } catch (permError) {
-        // If we can't query permissions, proceed with geolocation request
-        console.log('Could not query geolocation permission:', permError);
-      }
-
-      // Get location
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        const geolocationError = (error: GeolocationPositionError) => {
+        navigator.geolocation.getCurrentPosition(resolve, (error) => {
           if (error.code === 1) {
+            const isChrome = navigator.userAgent.indexOf('Chrome') > -1;
+            const isSafari = navigator.userAgent.indexOf('Safari') > -1 && navigator.userAgent.indexOf('Chrome') === -1;
+            
+            let instructions = 'To enable location access:\n\n';
+            if (isChrome) {
+              instructions += '1. Click the lock/info icon in the address bar (left of the URL)\n' +
+                           '2. Click "Site settings"\n' +
+                           '3. Find "Location" and change it to "Allow"\n' +
+                           '4. Refresh the page';
+            } else if (isSafari) {
+              instructions += '1. Click Safari in the menu bar\n' +
+                           '2. Click "Settings" (or Preferences)\n' +
+                           '3. Go to "Websites" tab\n' +
+                           '4. Find "Location Services" and allow for this website';
+            } else {
+              instructions += 'Please enable location services in your browser settings and refresh the page.';
+            }
+            alert(instructions);
             reject(new Error('PERMISSION_DENIED'));
           } else {
             reject(error);
           }
-        };
-
-        navigator.geolocation.getCurrentPosition(resolve, geolocationError, {
+        }, {
           enableHighAccuracy: true,
           timeout: 10000,
           maximumAge: 0
@@ -174,22 +177,8 @@ function App() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Reverse geocode the location
-      let locationName;
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.lat}&lon=${location.lng}&zoom=10`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          locationName = data.display_name;
-        }
-      } catch (error) {
-        console.error('Error reverse geocoding:', error);
-      }
-
-      // Update state with coordinates and/or place name
-      const locationStr = locationName || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+      // Update state with coordinates
+      const locationStr = `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
       setLocations([locationStr]);
       setMapMarkers([location]);
       setStartDate(today);
@@ -197,19 +186,14 @@ function App() {
 
       // Fetch zmanim
       const formattedDate = format(today, 'yyyy-MM-dd');
-      try {
-        const results = await Promise.all([
-          fetchZmanim(
-            `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`, // Always use coordinates for API
-            formattedDate,
-            formattedDate
-          )
-        ]);
-        setZmanimData(results);
-      } catch (error) {
-        console.error('Error fetching zmanim:', error);
-        alert('Error fetching zmanim data. Please try again.');
-      }
+      const results = await Promise.all([
+        fetchZmanim(
+          locationStr,
+          formattedDate,
+          formattedDate
+        )
+      ]);
+      setZmanimData(results);
     } catch (error) {
       console.error('Error getting location:', error);
       
