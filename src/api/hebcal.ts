@@ -21,9 +21,21 @@ export async function fetchZmanim(
     params.append('longitude', location.lng.toString());
   }
 
-  const response = await fetch(`https://www.hebcal.com/zmanim/v2?${params}`);
+  const response = await fetch(`https://www.hebcal.com/zmanim/v2?${params}`, {
+    mode: 'cors',
+    headers: {
+      'Accept': 'application/json'
+    }
+  });
   if (!response.ok) {
-    throw new Error('Failed to fetch zmanim data');
+    const errorText = await response.text();
+    console.error('Hebcal API Error:', {
+      status: response.status,
+      statusText: response.statusText,
+      errorText,
+      url: response.url
+    });
+    throw new Error(`Failed to fetch zmanim data: ${response.status} ${response.statusText}`);
   }
 
   const data = await response.json();
