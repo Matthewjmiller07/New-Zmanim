@@ -15,7 +15,9 @@ export async function fetchZmanim(
   });
 
   if (typeof location === 'string') {
-    params.append('city', location);
+    // Convert city name to a format the API accepts
+    const formattedCity = location.replace(/,.*$/, '').trim();
+    params.append('city', formattedCity);
   } else {
     params.append('latitude', location.lat.toString());
     params.append('longitude', location.lng.toString());
