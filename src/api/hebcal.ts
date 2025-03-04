@@ -3,10 +3,11 @@ import { ZmanimData } from '../types/zmanim';
 const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
 export async function geocodeLocation(query: string): Promise<{ lat: number; lng: number; display_name: string }> {
-  // Add country if not specified to improve geocoding accuracy
-  if (!query.toLowerCase().includes('canada') && !query.toLowerCase().includes('usa') && !query.toLowerCase().includes('united states')) {
-    query = `${query}, USA`;
+  // Skip short queries to avoid meaningless geocoding attempts
+  if (!query || query.trim().length < 3) {
+    throw new Error(`Query too short: ${query}`);
   }
+
   // Try direct coordinate parsing first
   if (query.includes(',')) {
     const [lat, lng] = query.split(',').map(n => parseFloat(n.trim()));
@@ -19,13 +20,13 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
     }
   }
 
-  // Otherwise try geocoding the location name
+  // Geocode the location name as-is, relying on countrycodes to filter
   try {
-    const encodedQuery = encodeURIComponent(query);
+    const encodedQuery = encodeURIComponent(query.trim());
     const response = await fetch(
       `${CORS_PROXY}https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1&addressdetails=1&countrycodes=us,ca`
     );
-    
+
     if (!response.ok) {
       throw new Error(`Geocoding failed: ${response.statusText}`);
     }
@@ -37,7 +38,7 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
 
     const result = data[0];
     if (!result.lat || !result.lon) {
-      throw new Error(`Invalid geocoding response for: ${query}`);
+      throw new Error(`Invalid geocoding response for: ${query} - ${JSON.stringify(result)}`);
     }
 
     // Extract city name from address details or use the original query
@@ -48,8 +49,12 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
       lng: parseFloat(result.lon),
       display_name: cityName
     };
-  } catch (error) {
-    console.error('Geocoding error:', error);
+  } catch (error: any) {
+    console.error('Geocoding error:', {
+      query,
+      message: error.message,
+      stack: error.stack
+    });
     throw error;
   }
 }
@@ -66,7 +71,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string> 
 
     const data = await response.json();
     return data.display_name;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Reverse geocoding error:', error);
     throw error;
   }
@@ -87,7 +92,7 @@ export async function fetchZmanim(
         const geocoded = await geocodeLocation(location);
         lat = geocoded.lat;
         lng = geocoded.lng;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Geocoding error:', error);
         throw new Error(`Could not geocode location: ${location}`);
       }
