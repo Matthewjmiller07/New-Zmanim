@@ -148,7 +148,7 @@ const ZmanimAnalysis: React.FC<ZmanimAnalysisProps> = ({ data, locations, select
   return (
     <Paper sx={{ p: 3, mt: 3 }}>
       <Typography variant="h6" gutterBottom>
-        Zmanim Analysis ({format(new Date(data[0].date.start), 'MMM d, yyyy')} - {format(new Date(data[0].date.end), 'MMM d, yyyy')})
+        Zmanim Analysis ({format(new Date(data[0].times[Object.keys(data[0].times)[0]][Object.keys(data[0].times[Object.keys(data[0].times)[0]])[0]].split('T')[0]), 'MMM d, yyyy')})
       </Typography>
       {selectedZmanim.map(zman => (
         <Box key={zman} sx={{ mb: 4 }}>

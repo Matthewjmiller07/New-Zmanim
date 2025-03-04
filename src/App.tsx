@@ -72,12 +72,14 @@ function App() {
 
   const handleTodayClick = async () => {
     const today = new Date();
-    setStartDate(today);
-    setEndDate(today);
+    // Strip time component to avoid timezone issues
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    setStartDate(todayStart);
+    setEndDate(todayStart);
     setIsLoading(true);
 
     try {
-      const formattedDate = format(today, 'yyyy-MM-dd');
+      const formattedDate = format(todayStart, 'yyyy-MM-dd');
       const results = await Promise.all(
         locations.map(location =>
           fetchZmanim(location, formattedDate, formattedDate)
@@ -104,7 +106,10 @@ function App() {
           setIsLoading(true);
           try {
             const today = new Date();
-            const formattedDate = format(today, 'yyyy-MM-dd');
+            const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            setStartDate(todayStart);
+            setEndDate(todayStart);
+            const formattedDate = format(todayStart, 'yyyy-MM-dd');
             const results = await Promise.all([
               fetchZmanim(
                 `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,

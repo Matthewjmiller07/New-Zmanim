@@ -26,7 +26,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
           onClick={onTodayClick}
           disabled={isLoading}
         >
-          Today's Zmanim ({format(new Date(), 'MMM d')})
+          Today's Zmanim ({format(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()), 'MMM d')})
         </Button>
         <Button
           startIcon={<MyLocationIcon />}
