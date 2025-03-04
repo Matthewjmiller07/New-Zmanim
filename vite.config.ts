@@ -16,7 +16,7 @@ export default defineConfig({
     }
   },
   plugins: [react()],
-  base: '/jewish-zmanim/',
+
   server: {
     port: 5173,
     open: true
