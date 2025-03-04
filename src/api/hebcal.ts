@@ -16,10 +16,24 @@ export async function fetchZmanim(
   });
 
   if (typeof location === 'string') {
-    // Convert city name to a format the API accepts
-    const formattedCity = location.replace(/,.*$/, '').trim();
-    params.append('city', formattedCity);
+    if (location.includes(',')) {
+      // Handle lat,lng string format
+      const [lat, lng] = location.split(',').map(n => parseFloat(n.trim()));
+      if (!isNaN(lat) && !isNaN(lng)) {
+        params.append('latitude', lat.toString());
+        params.append('longitude', lng.toString());
+      } else {
+        throw new Error('Invalid coordinates format');
+      }
+    } else {
+      // Convert city name to a format the API accepts
+      const formattedCity = location.trim();
+      params.append('city', formattedCity);
+    }
   } else {
+    if (isNaN(location.lat) || isNaN(location.lng)) {
+      throw new Error('Invalid coordinates');
+    }
     params.append('latitude', location.lat.toString());
     params.append('longitude', location.lng.toString());
   }

@@ -29,46 +29,64 @@ const ZmanimMap: React.FC<ZmanimMapProps> = ({ onLocationSelect, locations }) =>
     const fetchLocations = async () => {
       const newMarkers = await Promise.all(
         locations.map(async (loc) => {
-          // If location is already lat/lng
-          if (loc.includes(',')) {
-            const [lat, lng] = loc.split(',').map(Number);
-            // Reverse geocode to get place name
-            try {
+          try {
+            // If location is already lat/lng
+            if (loc.includes(',')) {
+              const [lat, lng] = loc.split(',').map(n => parseFloat(n.trim()));
+              if (isNaN(lat) || isNaN(lng)) {
+                console.error('Invalid coordinates:', loc);
+                return null;
+              }
+              
+              try {
+                const response = await fetch(
+                  `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`
+                );
+                if (!response.ok) throw new Error('Geocoding failed');
+                
+                const data = await response.json();
+                return {
+                  position: new LatLng(lat, lng),
+                  name: data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+                };
+              } catch (error) {
+                // Fallback to coordinates if geocoding fails
+                return {
+                  position: new LatLng(lat, lng),
+                  name: `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+                };
+              }
+            } else {
+              // Forward geocode place name
               const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc)}&limit=1`
               );
-              const data = await response.json();
-              return {
-                position: new LatLng(lat, lng),
-                name: data.display_name || `${lat}, ${lng}`
-              };
-            } catch (error) {
-              return {
-                position: new LatLng(lat, lng),
-                name: `${lat}, ${lng}`
-              };
-            }
-          } else {
-            // Forward geocode place name
-            try {
-              const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc)}`
-              );
+              if (!response.ok) throw new Error('Geocoding failed');
+              
               const data = await response.json();
               if (data[0]) {
+                const lat = parseFloat(data[0].lat);
+                const lng = parseFloat(data[0].lon);
                 return {
-                  position: new LatLng(Number(data[0].lat), Number(data[0].lon)),
+                  position: new LatLng(lat, lng),
                   name: loc
                 };
               }
-            } catch (error) {
-              console.error('Error geocoding location:', error);
             }
+          } catch (error) {
+            console.error('Error processing location:', loc, error);
           }
           return null;
         })
       );
-      setMarkers(newMarkers.filter((marker): marker is { position: LatLng; name: string } => marker !== null));
+      
+      const validMarkers = newMarkers.filter((marker): marker is { position: LatLng; name: string } => {
+        return marker !== null && 
+               !isNaN(marker.position.lat) && 
+               !isNaN(marker.position.lng);
+      });
+      
+      setMarkers(validMarkers);
     };
 
     fetchLocations();

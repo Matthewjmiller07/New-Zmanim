@@ -82,20 +82,13 @@ function App() {
     }
 
     try {
-      // First check if we have permission
-      const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-      
-      if (permissionStatus.state === 'denied') {
-        alert('Location access is blocked. Please enable location access in your browser settings.');
-        return;
-      }
-
       setIsLoading(true);
-      
+
+      // Get location
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 5000,
+          timeout: 10000,
           maximumAge: 0
         });
       });
@@ -104,37 +97,45 @@ function App() {
         lat: position.coords.latitude,
         lng: position.coords.longitude
       };
-      
+
       // Get today's date
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
+      // Format coordinates with more precision
+      const locationStr = `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+
       // Update state
-      setLocations([`${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`]);
+      setLocations([locationStr]);
       setStartDate(today);
       setEndDate(today);
-      
+
       // Fetch zmanim
       const formattedDate = format(today, 'yyyy-MM-dd');
-      const results = await Promise.all([
-        fetchZmanim(
-          `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
-          formattedDate,
-          formattedDate
-        )
-      ]);
-      
-      setZmanimData(results);
+      try {
+        const results = await Promise.all([
+          fetchZmanim(locationStr, formattedDate, formattedDate)
+        ]);
+        setZmanimData(results);
+      } catch (error) {
+        console.error('Error fetching zmanim:', error);
+        alert('Error fetching zmanim data. Please try again.');
+      }
     } catch (error) {
       console.error('Error getting location:', error);
-      if ((error as GeolocationPositionError).code === 1) {
-        alert('Location access was denied. Please enable location access in your browser settings.');
-      } else if ((error as GeolocationPositionError).code === 2) {
-        alert('Location is not available. Please try again.');
-      } else if ((error as GeolocationPositionError).code === 3) {
-        alert('Location request timed out. Please try again.');
+      const geoError = error as GeolocationPositionError;
+      
+      if (geoError.code === 1) {
+        alert('Please allow location access in your browser settings:\n\n' +
+              'Chrome: Click the lock icon in the address bar > Site settings > Location > Allow\n' +
+              'Safari: Safari menu > Settings > Websites > Location > Allow\n' +
+              'Firefox: Click the lock icon > Clear permission');
+      } else if (geoError.code === 2) {
+        alert('Could not get your location. Please check your device\'s location services.');
+      } else if (geoError.code === 3) {
+        alert('Location request timed out. Please check your internet connection and try again.');
       } else {
-        alert('Error getting location. Please try again.');
+        alert('Error getting your location. Please try again or enter your location manually.');
       }
     } finally {
       setIsLoading(false);
