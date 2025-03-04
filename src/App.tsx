@@ -23,6 +23,7 @@ import ZmanimSelector from './components/ZmanimSelector';
 import ZmanimChart from './components/ZmanimChart';
 import ZmanimAnalysis from './components/ZmanimAnalysis';
 import ZmanimTable from './components/ZmanimTable';
+import QuickActions from './components/QuickActions';
 import { fetchZmanim } from './api/hebcal';
 import { ZmanimData } from './types/zmanim';
 
@@ -69,6 +70,63 @@ function App() {
     setLocations([`${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`]);
   };
 
+  const handleTodayClick = async () => {
+    const today = new Date();
+    setStartDate(today);
+    setEndDate(today);
+    setIsLoading(true);
+
+    try {
+      const formattedDate = format(today, 'yyyy-MM-dd');
+      const results = await Promise.all(
+        locations.map(location =>
+          fetchZmanim(location, formattedDate, formattedDate)
+        )
+      );
+      setZmanimData(results);
+    } catch (error) {
+      console.error('Error fetching zmanim:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCurrentLocationClick = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          handleMapLocationSelect(location);
+          
+          setIsLoading(true);
+          try {
+            const today = new Date();
+            const formattedDate = format(today, 'yyyy-MM-dd');
+            const results = await Promise.all([
+              fetchZmanim(
+                `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
+                formattedDate,
+                formattedDate
+              )
+            ]);
+            setZmanimData(results);
+          } catch (error) {
+            console.error('Error fetching zmanim:', error);
+          } finally {
+            setIsLoading(false);
+          }
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          // You might want to add error handling UI here
+        }
+      );
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -103,6 +161,11 @@ function App() {
             </Typography>
 
             <Box component="form" onSubmit={handleSubmit} sx={{ mb: 4 }}>
+              <QuickActions
+                onTodayClick={handleTodayClick}
+                onCurrentLocationClick={handleCurrentLocationClick}
+                isLoading={isLoading}
+              />
               <ZmanimMap onLocationSelect={handleMapLocationSelect} />
               
               <LocationInput
