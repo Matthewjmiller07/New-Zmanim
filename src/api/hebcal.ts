@@ -21,7 +21,7 @@ export async function fetchZmanim(
     params.append('longitude', location.lng.toString());
   }
 
-  const response = await fetch(`https://www.hebcal.com/zmanim?${params}`);
+  const response = await fetch(`https://www.hebcal.com/zmanim/v2?${params}`);
   if (!response.ok) {
     throw new Error('Failed to fetch zmanim data');
   }
