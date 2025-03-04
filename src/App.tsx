@@ -24,7 +24,7 @@ import ZmanimChart from './components/ZmanimChart';
 import ZmanimAnalysis from './components/ZmanimAnalysis';
 import ZmanimTable from './components/ZmanimTable';
 import QuickActions from './components/QuickActions';
-import { fetchZmanim } from './api/hebcal';
+import { fetchZmanim, geocodeLocation, reverseGeocode } from './api/hebcal';
 import { ZmanimData } from './types/zmanim';
 
 const queryClient = new QueryClient();
@@ -42,6 +42,7 @@ function App() {
   );
 
   const [locations, setLocations] = useState<string[]>(['Jerusalem, Israel']);
+  const [mapMarkers, setMapMarkers] = useState<Array<{ lat: number; lng: number }>>([{ lat: 31.7767, lng: 35.2345 }]); // Jerusalem
   const [selectedZmanim, setSelectedZmanim] = useState<string[]>([
     'sunrise',
     'sunset',
@@ -60,27 +61,38 @@ function App() {
     setLocations(locations.filter((_, i) => i !== index));
   };
 
-  const handleLocationChange = (index: number, value: string) => {
+  const handleLocationChange = async (index: number, value: string) => {
     const newLocations = [...locations];
     newLocations[index] = value;
     setLocations(newLocations);
+
+    // Only attempt geocoding for non-coordinate inputs
+    if (!value.includes(',')) {
+      try {
+        const result = await geocodeLocation(value);
+        const newLocations = [...locations];
+        newLocations[index] = result.display_name;
+        setLocations(newLocations);
+        setMapMarkers(prev => {
+          const newMarkers = [...prev];
+          newMarkers[index] = { lat: result.lat, lng: result.lng };
+          return newMarkers;
+        });
+      } catch (error) {
+        console.error('Error processing location:', value, error);
+      }
+    }
   };
 
   const handleMapLocationSelect = async (location: { lat: number; lng: number }) => {
     try {
-      // Reverse geocode the location
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.lat}&lon=${location.lng}&zoom=10`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setLocations([data.display_name || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`]);
-      } else {
-        setLocations([`${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`]);
-      }
+      const displayName = await reverseGeocode(location.lat, location.lng);
+      setLocations([displayName || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`]);
+      setMapMarkers([location]);
     } catch (error) {
       console.error('Error reverse geocoding:', error);
       setLocations([`${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`]);
+      setMapMarkers([location]);
     }
   };
 
@@ -153,6 +165,7 @@ function App() {
       // Update state with coordinates and/or place name
       const locationStr = locationName || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
       setLocations([locationStr]);
+      setMapMarkers([location]);
       setStartDate(today);
       setEndDate(today);
 
@@ -251,7 +264,7 @@ function App() {
               />
               <ZmanimMap 
                 onLocationSelect={handleMapLocationSelect}
-                locations={locations}
+                markers={mapMarkers}
               />
               
               <LocationInput

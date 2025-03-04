@@ -1,5 +1,53 @@
 import { ZmanimData } from '../types/zmanim';
 
+const CORS_PROXY = 'https://corsproxy.io/?';
+
+export async function geocodeLocation(query: string): Promise<{ lat: number; lng: number; display_name: string }> {
+  try {
+    const encodedQuery = encodeURIComponent(query);
+    const response = await fetch(
+      `${CORS_PROXY}https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Geocoding failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (!data || data.length === 0) {
+      throw new Error('Location not found');
+    }
+
+    return {
+      lat: parseFloat(data[0].lat),
+      lng: parseFloat(data[0].lon),
+      display_name: data[0].display_name
+    };
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    throw error;
+  }
+}
+
+export async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const response = await fetch(
+      `${CORS_PROXY}https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Reverse geocoding failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.display_name;
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
+    throw error;
+  }
+}
+
+
 export async function fetchZmanim(
   location: { lat: number; lng: number } | string,
   startDate: string,
