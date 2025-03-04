@@ -16,6 +16,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { createTheme } from '@mui/material/styles';
 import { format } from 'date-fns';
+import debounce from 'lodash/debounce';
 
 import ZmanimMap from './components/ZmanimMap';
 import LocationInput from './components/LocationInput';
@@ -61,18 +62,17 @@ function App() {
     setLocations(locations.filter((_, i) => i !== index));
   };
 
-  const handleLocationChange = async (index: number, value: string) => {
-    const newLocations = [...locations];
-    newLocations[index] = value;
-    setLocations(newLocations);
-
-    // Only attempt geocoding for non-coordinate inputs
-    if (!value.includes(',')) {
+  const debouncedGeocoding = React.useCallback(
+    debounce(async (value: string, index: number) => {
+      if (!value || value.length < 3) return; // Don't geocode short queries
+      
       try {
         const result = await geocodeLocation(value);
-        const newLocations = [...locations];
-        newLocations[index] = result.display_name;
-        setLocations(newLocations);
+        setLocations(prev => {
+          const newLocations = [...prev];
+          newLocations[index] = result.display_name;
+          return newLocations;
+        });
         setMapMarkers(prev => {
           const newMarkers = [...prev];
           newMarkers[index] = { lat: result.lat, lng: result.lng };
@@ -81,6 +81,18 @@ function App() {
       } catch (error) {
         console.error('Error processing location:', value, error);
       }
+    }, 1000), // Wait 1 second after typing stops
+    []
+  );
+
+  const handleLocationChange = (index: number, value: string) => {
+    const newLocations = [...locations];
+    newLocations[index] = value;
+    setLocations(newLocations);
+
+    // Only attempt geocoding for non-coordinate inputs
+    if (!value.includes(',')) {
+      debouncedGeocoding(value, index);
     }
   };
 
