@@ -3,7 +3,7 @@ import { ZmanimData } from '../types/zmanim';
 const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
 export async function geocodeLocation(query: string): Promise<{ lat: number; lng: number; display_name: string }> {
-  // If query looks like coordinates, parse them directly
+  // Try direct coordinate parsing first
   if (query.includes(',')) {
     const [lat, lng] = query.split(',').map(n => parseFloat(n.trim()));
     if (!isNaN(lat) && !isNaN(lng)) {
@@ -14,10 +14,12 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
       };
     }
   }
+
+  // Otherwise try geocoding the location name
   try {
     const encodedQuery = encodeURIComponent(query);
     const response = await fetch(
-      `${CORS_PROXY}https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1`
+      `${CORS_PROXY}https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1&addressdetails=1`
     );
     
     if (!response.ok) {
@@ -25,14 +27,19 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
     }
 
     const data = await response.json();
-    if (!data || data.length === 0) {
-      throw new Error('Location not found');
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      throw new Error(`Location not found: ${query}`);
+    }
+
+    const result = data[0];
+    if (!result.lat || !result.lon) {
+      throw new Error(`Invalid geocoding response for: ${query}`);
     }
 
     return {
-      lat: parseFloat(data[0].lat),
-      lng: parseFloat(data[0].lon),
-      display_name: data[0].display_name
+      lat: parseFloat(result.lat),
+      lng: parseFloat(result.lon),
+      display_name: result.display_name || query
     };
   } catch (error) {
     console.error('Geocoding error:', error);
