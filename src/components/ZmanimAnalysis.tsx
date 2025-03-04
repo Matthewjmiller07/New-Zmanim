@@ -17,7 +17,7 @@ interface ZmanComparison {
   date: string;
 }
 
-const ZmanimAnalysis: React.FC<ZmanimAnalysisProps> = ({ data, locations, selectedZmanim }) => {
+const ZmanimAnalysis: React.FC<ZmanimAnalysisProps> = ({ data, locations, selectedZmanim, startDate }) => {
   const formatTimeWithTimezone = (date: Date, tzid: string): string => {
     return date.toLocaleTimeString('en-US', {
       timeZone: tzid,
