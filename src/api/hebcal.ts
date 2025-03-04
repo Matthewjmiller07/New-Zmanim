@@ -8,7 +8,23 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
     throw new Error(`Query too short: ${query}`);
   }
 
-  // Try direct coordinate parsing first
+  // Try to extract coordinates from "City (Lat: X, Lng: Y)" format
+  const coordMatch = query.match(/Lat: ([-\d.]+), Lng: ([-\d.]+)/);
+  if (coordMatch) {
+    const lat = parseFloat(coordMatch[1]);
+    const lng = parseFloat(coordMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      // Extract city name (everything before the parentheses)
+      const cityName = query.split(' (')[0].trim();
+      return {
+        lat,
+        lng,
+        display_name: cityName || query // Use city name if available, otherwise full query
+      };
+    }
+  }
+
+  // Try direct coordinate parsing (e.g., "lat, lng")
   if (query.includes(',')) {
     const [lat, lng] = query.split(',').map(n => parseFloat(n.trim()));
     if (!isNaN(lat) && !isNaN(lng)) {
@@ -20,10 +36,10 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
     }
   }
 
-  // Geocode the location name as-is, relying on countrycodes to filter
+  // Fall back to geocoding if no coordinates are found
   try {
     const encodedQuery = encodeURIComponent(query.trim());
-    const url = `${CORS_PROXY}https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1&addressdetails=1&countrycodes=us,ca`;
+    const url = `https://corsproxy.io/?https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1&addressdetails=1&countrycodes=us,ca`;
     console.log('Fetching geocoding URL:', url);
 
     const response = await fetch(url);
@@ -37,7 +53,6 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
     const data = await response.json();
     console.log('Geocoding response data:', data);
 
-    // Check if the proxy returned an error object
     if (data && data.error) {
       throw new Error(`Proxy error: ${data.error.message || JSON.stringify(data.error)}`);
     }
