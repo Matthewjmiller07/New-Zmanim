@@ -14,7 +14,11 @@ const ZmanimChart: React.FC<ZmanimChartProps> = ({ data, locations, selectedZman
   const theme = useTheme();
 
   const getSeries = () => {
-    const series: ApexOptions['series'] = [];
+    const series: Array<{
+      name: string;
+      data: [number, number][];
+      type: 'line';
+    }> = [];
     let minTime = Infinity;
     let maxTime = -Infinity;
 
