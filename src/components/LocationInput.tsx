@@ -37,6 +37,11 @@ const LocationInput: React.FC<LocationInputProps> = ({
               onChange={(e) => onLocationChange(index, e.target.value)}
               placeholder="Enter city name or coordinates"
               size="small"
+              helperText={
+                location.includes(',') && location.split(',').length === 2
+                  ? 'Coordinates detected - fetching location name...'
+                  : 'Enter a city name or click on the map'
+              }
             />
             {locations.length > 1 && (
               <IconButton

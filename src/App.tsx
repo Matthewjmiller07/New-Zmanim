@@ -66,8 +66,22 @@ function App() {
     setLocations(newLocations);
   };
 
-  const handleMapLocationSelect = (location: { lat: number; lng: number }) => {
-    setLocations([`${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`]);
+  const handleMapLocationSelect = async (location: { lat: number; lng: number }) => {
+    try {
+      // Reverse geocode the location
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.lat}&lon=${location.lng}&zoom=10`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setLocations([data.display_name || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`]);
+      } else {
+        setLocations([`${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`]);
+      }
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+      setLocations([`${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`]);
+    }
   };
 
   const handleTodayClick = () => {
@@ -84,9 +98,29 @@ function App() {
     try {
       setIsLoading(true);
 
+      // Try to get the current permission state
+      let permissionStatus;
+      try {
+        permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+        if (permissionStatus.state === 'denied') {
+          throw new Error('PERMISSION_DENIED');
+        }
+      } catch (permError) {
+        // If we can't query permissions, proceed with geolocation request
+        console.log('Could not query geolocation permission:', permError);
+      }
+
       // Get location
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
+        const geolocationError = (error: GeolocationPositionError) => {
+          if (error.code === 1) {
+            reject(new Error('PERMISSION_DENIED'));
+          } else {
+            reject(error);
+          }
+        };
+
+        navigator.geolocation.getCurrentPosition(resolve, geolocationError, {
           enableHighAccuracy: true,
           timeout: 10000,
           maximumAge: 0
@@ -102,10 +136,22 @@ function App() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Format coordinates with more precision
-      const locationStr = `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+      // Reverse geocode the location
+      let locationName;
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.lat}&lon=${location.lng}&zoom=10`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          locationName = data.display_name;
+        }
+      } catch (error) {
+        console.error('Error reverse geocoding:', error);
+      }
 
-      // Update state
+      // Update state with coordinates and/or place name
+      const locationStr = locationName || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
       setLocations([locationStr]);
       setStartDate(today);
       setEndDate(today);
@@ -114,7 +160,11 @@ function App() {
       const formattedDate = format(today, 'yyyy-MM-dd');
       try {
         const results = await Promise.all([
-          fetchZmanim(locationStr, formattedDate, formattedDate)
+          fetchZmanim(
+            `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`, // Always use coordinates for API
+            formattedDate,
+            formattedDate
+          )
         ]);
         setZmanimData(results);
       } catch (error) {
@@ -123,16 +173,34 @@ function App() {
       }
     } catch (error) {
       console.error('Error getting location:', error);
-      const geoError = error as GeolocationPositionError;
       
-      if (geoError.code === 1) {
-        alert('Please allow location access in your browser settings:\n\n' +
-              'Chrome: Click the lock icon in the address bar > Site settings > Location > Allow\n' +
-              'Safari: Safari menu > Settings > Websites > Location > Allow\n' +
-              'Firefox: Click the lock icon > Clear permission');
-      } else if (geoError.code === 2) {
+      if (error instanceof Error && error.message === 'PERMISSION_DENIED') {
+        const isChrome = navigator.userAgent.indexOf('Chrome') > -1;
+        const isSafari = navigator.userAgent.indexOf('Safari') > -1 && navigator.userAgent.indexOf('Chrome') === -1;
+        
+        let instructions = 'To enable location access:\n\n';
+        if (isChrome) {
+          instructions += '1. Click the lock/info icon in the address bar (left of the URL)\n' +
+                         '2. Click "Site settings"\n' +
+                         '3. Find "Location" and change it to "Allow"\n' +
+                         '4. Refresh the page';
+        } else if (isSafari) {
+          instructions += '1. Click Safari in the menu bar\n' +
+                         '2. Click "Settings" (or Preferences)\n' +
+                         '3. Go to "Websites" tab\n' +
+                         '4. Click "Location" on the left\n' +
+                         '5. Find this website and set it to "Allow"\n' +
+                         '6. Refresh the page';
+        } else {
+          instructions += '1. Click the lock/info icon in the address bar\n' +
+                         '2. Find and enable location access\n' +
+                         '3. Refresh the page';
+        }
+        
+        alert(instructions);
+      } else if ((error as GeolocationPositionError).code === 2) {
         alert('Could not get your location. Please check your device\'s location services.');
-      } else if (geoError.code === 3) {
+      } else if ((error as GeolocationPositionError).code === 3) {
         alert('Location request timed out. Please check your internet connection and try again.');
       } else {
         alert('Error getting your location. Please try again or enter your location manually.');
