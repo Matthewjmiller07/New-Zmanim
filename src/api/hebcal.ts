@@ -39,7 +39,7 @@ export async function geocodeLocation(query: string): Promise<{ lat: number; lng
   // Fall back to geocoding if no coordinates are found
   try {
     const encodedQuery = encodeURIComponent(query.trim());
-    const url = `https://corsproxy.io/?https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1&addressdetails=1&countrycodes=us,ca`;
+    const url = `https://corsproxy.io/?https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1&addressdetails=1`;
     console.log('Fetching geocoding URL:', url);
 
     const response = await fetch(url);
